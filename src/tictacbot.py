@@ -1,7 +1,13 @@
 #!/usr/bin/python
-
-import sys, argparse, copy, signal, json, random, time, logging, httplib, sys, asyncore, thread
-import pydux
+#
+# Copyright 2018 The boardgame.io Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+#
+ 
+import sys, argparse, copy, signal, json, random, time, logging, sys
 import socketIO_client as io
 
 logging.basicConfig(level=logging.DEBUG)
@@ -15,7 +21,6 @@ class BoardGameIONamespace(io.BaseNamespace):
 
     def __init__(self, *args):
         io.BaseNamespace.__init__(self, *args)
-#        self.store = pydux.create_store(self.transition)
         self.game_id = None
         self.previous_state_id = None
 
