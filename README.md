@@ -11,3 +11,6 @@ $ npx babel-node --presets zero src/Server.js
   
 Run web app server with:  
 $ npm start  
+
+Run the Python bot with:
+$ ./tictacbot.py
