@@ -14,8 +14,8 @@ const server = Server({
 
 server.run(8000);
 
-const bot = new PythonBot({
-	game: TicTacToe,
-	server: 'localhost:8000',
-	playerID: '1'
-});
+// const bot = new PythonBot({
+// 	game: TicTacToe,
+// 	server: 'localhost:8000',
+// 	playerID: '1'
+// });
