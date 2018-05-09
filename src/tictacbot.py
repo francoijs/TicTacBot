@@ -30,7 +30,7 @@ class TicTacToeBot(Bot):
             if not cells[idx]:
                 break
         self.log.debug('cell chosen: '+str(idx))
-        return 'clickCell', idx
+        return self.make_move('clickCell', idx)
 
     # Called when game is over.
     def gameover(self, G, ctx):

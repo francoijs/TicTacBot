@@ -6,7 +6,7 @@
 # https://opensource.org/licenses/MIT.
 #
 
-import logging
+import logging, time
 import socketIO_client as io
 
 
@@ -18,6 +18,7 @@ class Namespace(io.BaseNamespace):
         io.BaseNamespace.__init__(self, *args)
         self.bot = None
         self.previous_state_id = None
+        self.actions = []
 
     def set_bot_info(self, bot):
         self.bot = bot
@@ -39,32 +40,34 @@ class Namespace(io.BaseNamespace):
         # is it my game and my turn to play?
         if game_id == self.bot.game_id:
             if not self.previous_state_id or state_id>=self.previous_state_id:
-                self.previous_state_id = state_id
 
+                self.previous_state_id = state_id
+                self.log.debug('state = %s' % str(state))
                 G = state['G']
+                
                 if 'gameover' in ctx:
                     # game over
                     self.bot.gameover(G, ctx)
                     
                 elif player == self.bot.player_id:
-                    # read state and choose an action
-                    action_type, action_args = self.bot.think(G, ctx)
-                    action = {
-                        'type': 'MAKE_MOVE',
-                        'payload': {
-                            'type': action_type,
-                            'args': action_args,
-                            'playerID': self.bot.player_id
-                        }
-                    }
-                    self.log.info('my turn to play: %s' % action['payload'])
-                    self.emit('action', action, state_id, game_id,
-                              self.bot.player_id)
+                    self.log.info('phase is %s' % (ctx['phase']))
+                    if not self.actions:
+                        # plan next actions
+                        self.actions = self.bot.think(G, ctx)
+                        if type(self.actions) is not list:
+                            self.actions = [self.actions]
+                    # pop next action
+                    if self.actions:
+                        action = self.actions.pop(0)
+                        self.log.info('sent action: %s' % action['payload'])
+                        self.emit('action', action, state_id, game_id,
+                                  self.bot.player_id)
+                        time.sleep(1)
 
 
 class Bot(object):
 
-    log = logging.getLogger('client.bor')
+    log = logging.getLogger('client.bot')
     
     def __init__(self, server='localhost', port='8000', game_name='default', game_id='default', player_id='1', num_players=2):
         """
@@ -77,7 +80,6 @@ class Bot(object):
         
         # open websocket
         socket = io.SocketIO(server, port, wait_for_connection=False)
-        #        socket.define(io.LoggingNamespace, '/'+game_name)
         self.io_namespace = socket.define(Namespace, '/'+game_name)
         self.io_namespace.set_bot_info(self)
         self.socket = socket
@@ -85,10 +87,30 @@ class Bot(object):
         # request initial sync
         self.io_namespace.emit('sync', self.game_id, player_id, self.num_players)
 
+    def make_move(self, type, args=[]):
+        return {
+            'type': 'MAKE_MOVE',
+            'payload': {
+                'type': type,
+                'args': args,
+                'playerID': self.player_id
+            }
+        }
+
+    def game_event(self, type):
+        return {
+            'type': 'GAME_EVENT',
+            'payload': {
+                'type': type,
+                'args': [],
+                'playerID': self.player_id
+            }
+        }
+
     def listen(self, timeout=1):
         """
         Listen and handle server events: when it is the bot's turn to play,
-        method 'think' will be called with the game state 'G' .
+        method 'think' will be called with the game state and context.
         Return after 'timeout' seconds if no events.
         """
         self.socket.wait(seconds=timeout)
@@ -96,7 +118,7 @@ class Bot(object):
     def think(G, ctx):
         """
         To be implemented by the user.
-        Shall return name of move and an array of arguments.
+        Shall return an array of moves, instantiated with make_move().
         """
         assert False
 
